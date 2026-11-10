@@ -1,0 +1,22 @@
+{
+  "name": "nexora-ai",
+  "version": "1.0.0",
+  "description": "NEXORA AI - Enterprise LangGraph Multi-Agent Operations Platform with 3D WebGL Engine",
+  "private": true,
+  "scripts": {
+    "postinstall": "npm --prefix frontend install",
+    "build": "npm --prefix frontend run build",
+    "dev": "npm --prefix frontend run dev",
+    "test:e2e": "npm --prefix frontend run test:e2e"
+  },
+  "keywords": [
+    "langgraph",
+    "agents",
+    "ai",
+    "react",
+    "webgl",
+    "vite"
+  ],
+  "author": "kayalvizhij-2008-it",
+  "license": "Apache-2.0"
+}
