@@ -172,3 +172,14 @@ cython_debug/
 /resources_to_reference
 
 vertexCred.json
+
+# NEXORA AI frontend & tests
+frontend/node_modules/
+frontend/dist/
+frontend/tsconfig.tsbuildinfo
+frontend/test-results/
+frontend/playwright-report/
+test-results/
+playwright-report/
+.env.local
+frontend/.env.local

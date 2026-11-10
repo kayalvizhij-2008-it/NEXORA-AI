@@ -1,9 +1,11 @@
-# LangGraph 101
+# NEXORA AI
 
-Welcome to LangGraph 101! 
+**Intelligence in Motion. Agents in Action.**
+
+NEXORA AI is an enterprise-style workspace for the LangGraph agents in this repository. It connects to the existing LangGraph API and presents registered assistants, streamed runs, thread state, and supported human-in-the-loop interrupts without replacing the original agent implementations.
 
 ## Introduction
-This repository contains hands-on tutorials for learning LangChain, LangGraph, and Deep Agents, organized into two learning tracks:
+This repository contains the NEXORA AI frontend alongside the original hands-on tutorials for learning LangChain, LangGraph, and Deep Agents, organized into two learning tracks:
 
 - **101**: Fundamentals of building agents with LangChain and LangGraph
 - **201**: Advanced patterns including multi-agent systems, deep agents, and production workflows
@@ -11,6 +13,98 @@ This repository contains hands-on tutorials for learning LangChain, LangGraph, a
 To understand how these frameworks relate to each other, see [LangChain vs LangGraph vs Deep Agents](https://docs.langchain.com/oss/python/concepts/products).
 
 This is a condensed version of LangChain Academy, intended to be run in a session with a LangChain engineer. If you're interested in going into more depth, or working through tutorials on your own, check out [LangChain Academy](https://academy.langchain.com/courses/intro-to-langgraph)! LangChain Academy has helpful pre-recorded videos from our LangChain engineers.
+
+## NEXORA AI workspace
+
+The React and TypeScript application lives in `frontend/`. It discovers assistants and threads from the LangGraph API, submits tasks to registered graphs, streams run events, inspects thread state, and resumes reported interrupts. It connects directly to live agents without mock execution data.
+
+### 3D WebGL Integration
+
+The application features two bespoke GPU-accelerated WebGL components:
+
+1. **`CorollaGleam`** (`frontend/src/components/3d/CorollaGleam.tsx`):
+   - Parametric 3D fluted corolla torus rendered with high-precision custom WebGL shaders.
+   - Real thin-film optical path interference, spectral dispersion, and dual-lobe Blinn-Phong/diamond gleam specular highlights.
+   - Pointer-following lerp inertia tracking, continuous ambient rotation, automatic WebGL context loss recovery, and accessibility-first `prefers-reduced-motion` compliance.
+   - Embedded prominently in the Landing Page hero, application header/footer, Dashboard emblem, Command Center, and Workflows toolbar.
+
+2. **`FoldingParticleShell`** (`frontend/src/components/3d/FoldingParticleShell.tsx`):
+   - Over 3,200 particle vertices distributed across a 3D spherical Fibonacci lattice.
+   - Real-time multi-harmonic wave folding equations (`sin(theta * freq + time) * cos(...)`) computed per-frame.
+   - Pointer magnetic warp distortion, camera-distance depth extinction, and additive alpha blending (`gl.ONE, gl.ONE`).
+   - Integrated via `Nexora3DEnvironment` as a persistent, non-blocking (`pointer-events: none`) ambient background across all application views.
+
+### Document Intelligence Workspace (`/app/documents`)
+
+- Native drag-and-drop file ingestion supporting PDF, TXT, Markdown, JSON, and CSV files (up to 25 MB).
+- One-click sample operations brief preloader (`NEXORA_AI_Sample_Operations_Brief.pdf`).
+- Client-side document parser with character count, estimated LLM token metrics, and instant full-text preview.
+- Direct dispatch to any registered LangGraph agent with pre-configured analysis presets (Executive Summary, Risk & Compliance, Strategic Action Plan, Technical Extraction).
+- Live streaming agent execution with instant Markdown, TXT, JSON, and formatted browser print/PDF export options.
+
+### Google OAuth 2.0 Authentication
+
+- Official Google Sign-In button with high-contrast Obsidian UI styling.
+- Secure PKCE/Implicit OAuth 2.0 flow configured for Google Identity Services.
+- OAuth redirect and callback handling via `/auth/callback`.
+- Local session persistence with decoded JWT user profile display (name, email, avatar).
+- Backend token verification endpoint in `utils/auth.py` validating Google JWKS signatures, audience (`aud`), issuer (`iss`), and expiration (`exp`).
+
+### Run locally on Windows
+
+Open two PowerShell terminals from the repository root.
+
+**Terminal 1 — configure and start the original LangGraph server:**
+
+```powershell
+Copy-Item .env.example .env
+# Edit .env and provide ANTHROPIC_API_KEY and TAVILY_API_KEY.
+uv sync
+uv run langgraph dev
+```
+
+`ANTHROPIC_API_KEY` is required by the current default in `utils/models.py`. `TAVILY_API_KEY` is used by the Deep Agent web-search tool. Other integrations require their own provider credentials as configured by the existing project.
+
+**Terminal 2 — start the NEXORA AI frontend:**
+
+```powershell
+Set-Location frontend
+Copy-Item .env.example .env
+npm install
+npm run dev
+```
+
+Open `http://127.0.0.1:5173`. During Vite development, `/langgraph-api` is proxied to `http://127.0.0.1:2024`. For another deployment, set `VITE_LANGGRAPH_API_URL` in the frontend environment to its API URL; configure deployment CORS/authentication at the server or trusted reverse proxy. Never place provider secrets in frontend variables.
+
+Build the production frontend with:
+
+```powershell
+npm run build
+```
+
+Preview the built frontend locally with:
+
+```powershell
+npm run preview
+```
+
+Run the browser checks from `frontend/` after starting the LangGraph server in Terminal 1:
+
+```powershell
+npx playwright install chromium
+npm run test:e2e
+```
+
+The end-to-end suite visits every workspace route, checks responsive navigation and preferences, and confirms the real 9-graph registry. It does not submit model tasks; those require valid provider credentials.
+
+### Integration boundaries
+
+- The original registry in `langgraph.json` remains the source of registered graphs.
+- The dashboard and agent directory use live assistants and threads; the generic LangGraph API does not expose all product metrics or a separate execution archive.
+- Approval actions are offered only for interrupts found in recent thread state. A graph must be configured to interrupt before approval/resume can be used.
+- The Deep Agent uses LangGraph `StoreBackend` for `/memories/`; generic thread endpoints do not expose a memory browser here. Inspect that store through LangGraph Studio or a separately authenticated store integration.
+- No application authentication service exists in the source repository. Protect a deployed API with the authentication mechanism of its host rather than presenting a client-side mock sign-in.
+- Markdown, TXT, and JSON exports use fetched thread state. “Print / save as PDF” opens the browser print dialog.
 
 ## What's Inside
 
@@ -132,7 +226,7 @@ This repository uses a **centralized utils module** (`utils/`) to avoid code dup
 - **`utils/models.py`** - LLM model initialization (OpenAI, Anthropic, Azure, Bedrock, Vertex AI)
 - **`utils/utils.py`** - Shared utility functions (`show_graph`, `get_engine_for_chinook_db`)
 
-**Default**: OpenAI with `o3-mini` model. To switch providers, edit `utils/models.py` following the instructions below.
+**Default**: Anthropic with `claude-haiku-4-5`, as configured in `utils/models.py`. To switch providers, edit `utils/models.py` following the instructions below.
 
 **Note**: Notebooks automatically add the project root to Python's path, so they can import from `utils` regardless of which subdirectory they're in.
 
