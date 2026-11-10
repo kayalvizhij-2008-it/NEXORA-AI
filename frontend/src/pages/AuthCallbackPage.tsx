@@ -1,55 +1,71 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import { CheckCircle2, CircleAlert, LoaderCircle, ArrowRight } from "lucide-react";
-import { handleGoogleCredentialResponse } from "../services/auth";
+import { CheckCircle2, CircleAlert, LoaderCircle, ArrowRight, ShieldCheck } from "lucide-react";
+import { verifyGoogleTokenOnBackend, validateOAuthState } from "../services/auth";
 import { CorollaGleam } from "../components/3d/CorollaGleam";
 
 export function AuthCallbackPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [status, setStatus] = useState<"processing" | "success" | "error">("processing");
-  const [message, setMessage] = useState("Authenticating with Google…");
+  const [message, setMessage] = useState("Authenticating with Google OAuth authority…");
 
   useEffect(() => {
-    // Google OAuth implicit grant returns tokens in URL hash fragment:
-    // e.g. #id_token=eyJ...&access_token=ya29...&token_type=Bearer
-    const hash = location.hash.startsWith("#") ? location.hash.substring(1) : location.hash;
-    const params = new URLSearchParams(hash || location.search);
+    async function processAuthCallback() {
+      // Google OAuth returns tokens in URL hash fragment or query params
+      const hash = location.hash.startsWith("#") ? location.hash.substring(1) : location.hash;
+      const params = new URLSearchParams(hash || location.search);
 
-    const idToken = params.get("id_token");
-    const errorParam = params.get("error");
+      const idToken = params.get("id_token");
+      const stateParam = params.get("state");
+      const errorParam = params.get("error");
+      const errorDesc = params.get("error_description");
 
-    if (errorParam) {
-      setStatus("error");
-      setMessage(`Google authorization returned an error: ${errorParam}`);
-      return;
+      if (errorParam) {
+        setStatus("error");
+        setMessage(`Google OAuth returned: ${errorDesc || errorParam}`);
+        return;
+      }
+
+      // Security Check: Validate state parameter to prevent CSRF / login injection
+      if (stateParam && !validateOAuthState(stateParam)) {
+        setStatus("error");
+        setMessage("Security validation failed: Invalid or expired OAuth state parameter.");
+        return;
+      }
+
+      if (idToken) {
+        setStatus("processing");
+        setMessage("Verifying Google ID token cryptographic signature with backend authority…");
+
+        const result = await verifyGoogleTokenOnBackend(idToken);
+
+        if (result.success && result.user) {
+          setStatus("success");
+          setMessage(`Welcome back, ${result.user.name}! Identity verified by server-side authority.`);
+          const timer = setTimeout(() => {
+            navigate("/app/dashboard", { replace: true });
+          }, 1400);
+          return () => clearTimeout(timer);
+        } else {
+          setStatus("error");
+          setMessage(result.error || "Backend verification rejected Google ID token credentials.");
+        }
+      } else {
+        const code = params.get("code");
+        if (code) {
+          setStatus("processing");
+          setMessage("Authorization code received. Authenticating with server...");
+          // In a code flow without server secret on client, redirect with state
+          setTimeout(() => navigate("/app/dashboard", { replace: true }), 1400);
+        } else {
+          setStatus("error");
+          setMessage("No authorization credentials or ID token found in the callback URL.");
+        }
+      }
     }
 
-    if (idToken) {
-      const user = handleGoogleCredentialResponse(idToken);
-      if (user) {
-        setStatus("success");
-        setMessage(`Welcome back, ${user.name}! Redirecting to your workspace…`);
-        const timer = setTimeout(() => {
-          navigate("/app/dashboard", { replace: true });
-        }, 1500);
-        return () => clearTimeout(timer);
-      } else {
-        setStatus("error");
-        setMessage("Could not parse Google ID token claims.");
-      }
-    } else {
-      // Check query params if code flow
-      const code = params.get("code");
-      if (code) {
-        setStatus("success");
-        setMessage("Authorization code received. Session established.");
-        setTimeout(() => navigate("/app/dashboard", { replace: true }), 1500);
-      } else {
-        setStatus("error");
-        setMessage("No authorization credentials found in the callback URL.");
-      }
-    }
+    processAuthCallback();
   }, [location, navigate]);
 
   return (

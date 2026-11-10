@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ShieldCheck, ArrowRight, UserCheck, LogOut, Radio } from "lucide-react";
 import { GoogleSignInButton } from "../components/auth/GoogleSignInButton";
-import { getStoredSession, clearSession, type UserProfile } from "../services/auth";
+import { getStoredSession, logoutSession, type UserProfile } from "../services/auth";
 import { CorollaGleam } from "../components/3d/CorollaGleam";
 
 export function LoginPage() {
@@ -16,8 +16,8 @@ export function LoginPage() {
     }
   }, []);
 
-  const handleLogout = () => {
-    clearSession();
+  const handleLogout = async () => {
+    await logoutSession();
     setUser(null);
   };
 
