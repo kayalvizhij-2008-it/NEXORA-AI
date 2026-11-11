@@ -101,7 +101,8 @@ test("email and password authentication supports registration, sign in, and sess
   await page.getByRole("button", { name: "Sign In" }).click();
   await expect(page.getByRole("heading", { name: "Sign In to NEXORA AI" })).toBeVisible();
 
-  // Test Auto-fill Lead Operator and submission
-  await page.getByRole("button", { name: "Auto-fill Lead Operator" }).click();
-  await expect(page.getByPlaceholder("operator@nexora.ai")).toHaveValue("operator@nexora.ai");
+  // Test typing credentials and form validation
+  await page.getByPlaceholder("operator@nexora.ai").fill("test.operator@nexora.ai");
+  await page.getByPlaceholder("••••••••••••").fill("SecurePass123!");
+  await expect(page.getByPlaceholder("operator@nexora.ai")).toHaveValue("test.operator@nexora.ai");
 });

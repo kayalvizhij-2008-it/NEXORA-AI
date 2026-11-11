@@ -11,7 +11,6 @@ import {
   User,
   LoaderCircle,
   AlertCircle,
-  KeyRound,
 } from "lucide-react";
 import {
   getStoredSession,
@@ -97,13 +96,6 @@ export function LoginPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Quick fill demo credentials for fast testing
-  const handleDemoFill = () => {
-    setEmail("operator@nexora.ai");
-    setPassword("SuperSecret123!");
-    setError(null);
   };
 
   return (
@@ -407,30 +399,14 @@ export function LoginPage() {
               <div
                 style={{
                   display: "flex",
-                  justifyContent: "space-between",
+                  justifyContent: "center",
                   alignItems: "center",
                   fontSize: "11px",
                   color: "#8e8da8",
                   padding: "0 2px",
                 }}
               >
-                <button
-                  type="button"
-                  onClick={handleDemoFill}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "#75dce8",
-                    cursor: "pointer",
-                    padding: 0,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "4px",
-                  }}
-                >
-                  <KeyRound size={12} /> Auto-fill Lead Operator
-                </button>
-                <span>PBKDF2 SHA-256</span>
+                <span>PBKDF2 SHA-256 Verified Security</span>
               </div>
             )}
 
