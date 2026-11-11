@@ -26,7 +26,14 @@ AGENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # --- Tools ---
 
-tavily_client = TavilyClient()
+def _get_tavily_client():
+    api_key = os.getenv("TAVILY_API_KEY")
+    if not api_key:
+        return None
+    try:
+        return TavilyClient(api_key=api_key)
+    except Exception:
+        return None
 
 
 @tool(parse_docstring=True)
@@ -36,7 +43,11 @@ def tavily_search(query: str) -> str:
     Args:
         query: Search query to execute
     """
-    search_results = tavily_client.search(query, max_results=3, topic="general")
+    client = _get_tavily_client()
+    if client is None:
+        return f"Tavily search simulated result for '{query}': TAVILY_API_KEY is not configured in the environment."
+
+    search_results = client.search(query, max_results=3, topic="general")
 
     result_texts = []
     for result in search_results.get("results", []):

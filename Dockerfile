@@ -29,4 +29,4 @@ ENV PORT=2024
 ENV HOST=0.0.0.0
 
 # Start LangGraph server with all 9 registered graphs
-CMD ["uv", "run", "langgraph", "dev", "--host", "0.0.0.0", "--port", "2024"]
+CMD ["sh", "-c", "uv run langgraph dev --host 0.0.0.0 --port ${PORT:-2024}"]
