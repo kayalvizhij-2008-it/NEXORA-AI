@@ -1,13 +1,39 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ShieldCheck, ArrowRight, UserCheck, LogOut, Radio } from "lucide-react";
-import { GoogleSignInButton } from "../components/auth/GoogleSignInButton";
-import { getStoredSession, logoutSession, type UserProfile } from "../services/auth";
+import {
+  ShieldCheck,
+  ArrowRight,
+  UserCheck,
+  LogOut,
+  Radio,
+  Lock,
+  Mail,
+  User,
+  LoaderCircle,
+  AlertCircle,
+  KeyRound,
+} from "lucide-react";
+import {
+  getStoredSession,
+  loginWithEmail,
+  registerWithEmail,
+  logoutSession,
+  type UserProfile,
+} from "../services/auth";
 import { CorollaGleam } from "../components/3d/CorollaGleam";
 
 export function LoginPage() {
   const navigate = useNavigate();
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [tab, setTab] = useState<"signin" | "register">("signin");
+
+  // Form states
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   useEffect(() => {
     const session = getStoredSession();
@@ -19,10 +45,66 @@ export function LoginPage() {
   const handleLogout = async () => {
     await logoutSession();
     setUser(null);
+    setError(null);
+    setSuccessMsg(null);
   };
 
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
-  const isGoogleConfigured = Boolean(clientId && !clientId.includes("YOUR_GOOGLE_CLIENT_ID"));
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccessMsg(null);
+
+    if (!email.trim() || !password) {
+      setError("Please provide both email and password.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      if (tab === "signin") {
+        const result = await loginWithEmail(email, password);
+        if (result.success && result.user) {
+          setUser(result.user);
+          setSuccessMsg(`Welcome back, ${result.user.name}! Redirecting…`);
+          setTimeout(() => navigate("/app/dashboard"), 900);
+        } else {
+          setError(result.error || "Invalid email or password.");
+        }
+      } else {
+        if (!name.trim()) {
+          setError("Please enter your name.");
+          setLoading(false);
+          return;
+        }
+        if (password.length < 8) {
+          setError("Password must be at least 8 characters long.");
+          setLoading(false);
+          return;
+        }
+
+        const result = await registerWithEmail(email, password, name);
+        if (result.success && result.user) {
+          setUser(result.user);
+          setSuccessMsg(`Account created for ${result.user.name}! Redirecting…`);
+          setTimeout(() => navigate("/app/dashboard"), 900);
+        } else {
+          setError(result.error || "Registration failed.");
+        }
+      }
+    } catch (err: any) {
+      setError(err.message || "Network error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Quick fill demo credentials for fast testing
+  const handleDemoFill = () => {
+    setEmail("operator@nexora.ai");
+    setPassword("SuperSecret123!");
+    setError(null);
+  };
 
   return (
     <div
@@ -37,8 +119,8 @@ export function LoginPage() {
       <div
         className="panel login-card"
         style={{
-          width: "min(100%, 440px)",
-          padding: "36px 30px",
+          width: "min(100%, 460px)",
+          padding: "36px 32px",
           display: "grid",
           gap: "22px",
           textAlign: "center",
@@ -54,12 +136,18 @@ export function LoginPage() {
             SECURITY GATEWAY
           </div>
           <h1 style={{ margin: "0 0 8px", fontSize: "22px", color: "#f8f7fc" }}>
-            {user ? "Authenticated Session" : "Access NEXORA AI"}
+            {user
+              ? "Authenticated Session"
+              : tab === "signin"
+              ? "Sign In to NEXORA AI"
+              : "Create Operator Account"}
           </h1>
           <p style={{ margin: 0, fontSize: "13px", color: "#a5a3b5", lineHeight: 1.6 }}>
             {user
               ? "You are authenticated and authorized to operate connected LangGraph agents."
-              : "Sign in with your enterprise Google account or continue as workspace operator."}
+              : tab === "signin"
+              ? "Enter your verified operator email and password to access the workspace."
+              : "Create a new operator profile with cryptographic PBKDF2 authentication."}
           </p>
         </div>
 
@@ -68,41 +156,44 @@ export function LoginPage() {
             className="user-profile-badge"
             style={{
               width: "100%",
-              padding: "16px",
+              padding: "18px",
               borderRadius: "12px",
               background: "rgba(25, 27, 56, 0.7)",
               border: "1px solid rgba(167, 139, 250, 0.25)",
               display: "grid",
-              gap: "12px",
+              gap: "14px",
               textAlign: "left",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              {user.picture ? (
-                <img
-                  src={user.picture}
-                  alt={user.name}
-                  style={{ width: "42px", height: "42px", borderRadius: "50%", border: "2px solid #a78bfa" }}
-                />
-              ) : (
-                <div
+              <div
+                style={{
+                  width: "44px",
+                  height: "44px",
+                  borderRadius: "50%",
+                  background: "linear-gradient(135deg, #7955e9, #75dce8)",
+                  display: "grid",
+                  placeItems: "center",
+                  fontWeight: 700,
+                  fontSize: "16px",
+                  color: "#fff",
+                }}
+              >
+                {user.name.charAt(0).toUpperCase()}
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <strong style={{ color: "#f8f7fc", fontSize: "14px", display: "block" }}>
+                  {user.name}
+                </strong>
+                <small
                   style={{
-                    width: "42px",
-                    height: "42px",
-                    borderRadius: "50%",
-                    background: "linear-gradient(135deg, #7955e9, #75dce8)",
-                    display: "grid",
-                    placeItems: "center",
-                    fontWeight: 700,
-                    color: "#fff",
+                    color: "#8e8da8",
+                    fontSize: "12px",
+                    display: "block",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
                   }}
                 >
-                  {user.name.charAt(0)}
-                </div>
-              )}
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <strong style={{ color: "#f8f7fc", fontSize: "14px", display: "block" }}>{user.name}</strong>
-                <small style={{ color: "#8e8da8", fontSize: "12px", display: "block", overflow: "hidden", textOverflow: "ellipsis" }}>
                   {user.email}
                 </small>
               </div>
@@ -129,8 +220,219 @@ export function LoginPage() {
             </div>
           </div>
         ) : (
-          <div style={{ width: "100%", display: "grid", gap: "12px" }}>
-            <GoogleSignInButton text="Continue with Google" />
+          <div style={{ width: "100%", display: "grid", gap: "16px" }}>
+            {/* Tab selector */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                padding: "4px",
+                borderRadius: "10px",
+                background: "rgba(10, 11, 26, 0.6)",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+                gap: "4px",
+              }}
+            >
+              <button
+                type="button"
+                className={`button ${tab === "signin" ? "button-primary" : "button-quiet"}`}
+                style={{ minHeight: "34px", fontSize: "12px" }}
+                onClick={() => {
+                  setTab("signin");
+                  setError(null);
+                  setSuccessMsg(null);
+                }}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                className={`button ${tab === "register" ? "button-primary" : "button-quiet"}`}
+                style={{ minHeight: "34px", fontSize: "12px" }}
+                onClick={() => {
+                  setTab("register");
+                  setError(null);
+                  setSuccessMsg(null);
+                }}
+              >
+                Register
+              </button>
+            </div>
+
+            {error && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "8px",
+                  padding: "10px 12px",
+                  borderRadius: "8px",
+                  background: "rgba(239, 68, 68, 0.15)",
+                  border: "1px solid rgba(239, 68, 68, 0.3)",
+                  color: "#fca5a5",
+                  fontSize: "12px",
+                  textAlign: "left",
+                }}
+              >
+                <AlertCircle size={15} style={{ flexShrink: 0, marginTop: "2px" }} />
+                <span>{error}</span>
+              </div>
+            )}
+
+            {successMsg && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "10px 12px",
+                  borderRadius: "8px",
+                  background: "rgba(16, 185, 129, 0.15)",
+                  border: "1px solid rgba(16, 185, 129, 0.3)",
+                  color: "#6ee7b7",
+                  fontSize: "12px",
+                  textAlign: "left",
+                }}
+              >
+                <UserCheck size={15} style={{ flexShrink: 0 }} />
+                <span>{successMsg}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} style={{ display: "grid", gap: "12px", textAlign: "left" }}>
+              {tab === "register" && (
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", color: "#a5a3b5", marginBottom: "6px" }}>
+                    Full Name
+                  </label>
+                  <div style={{ position: "relative" }}>
+                    <User
+                      size={15}
+                      style={{
+                        position: "absolute",
+                        left: "12px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        color: "#787894",
+                      }}
+                    />
+                    <input
+                      type="text"
+                      className="text-input"
+                      style={{ width: "100%", paddingLeft: "36px" }}
+                      placeholder="Jane Operator"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", color: "#a5a3b5", marginBottom: "6px" }}>
+                  Work Email
+                </label>
+                <div style={{ position: "relative" }}>
+                  <Mail
+                    size={15}
+                    style={{
+                      position: "absolute",
+                      left: "12px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      color: "#787894",
+                    }}
+                  />
+                  <input
+                    type="email"
+                    className="text-input"
+                    style={{ width: "100%", paddingLeft: "36px" }}
+                    placeholder="operator@nexora.ai"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: "12px", color: "#a5a3b5", marginBottom: "6px" }}>
+                  Password {tab === "register" && "(min. 8 characters)"}
+                </label>
+                <div style={{ position: "relative" }}>
+                  <Lock
+                    size={15}
+                    style={{
+                      position: "absolute",
+                      left: "12px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      color: "#787894",
+                    }}
+                  />
+                  <input
+                    type="password"
+                    className="text-input"
+                    style={{ width: "100%", paddingLeft: "36px" }}
+                    placeholder="••••••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="button button-primary"
+                style={{ width: "100%", minHeight: "42px", marginTop: "4px" }}
+                disabled={loading}
+              >
+                {loading ? (
+                  <LoaderCircle size={16} className="spin" />
+                ) : tab === "signin" ? (
+                  <>
+                    Sign In <ArrowRight size={15} />
+                  </>
+                ) : (
+                  <>
+                    Create Account <ArrowRight size={15} />
+                  </>
+                )}
+              </button>
+            </form>
+
+            {tab === "signin" && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  fontSize: "11px",
+                  color: "#8e8da8",
+                  padding: "0 2px",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={handleDemoFill}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#75dce8",
+                    cursor: "pointer",
+                    padding: 0,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
+                >
+                  <KeyRound size={12} /> Auto-fill Lead Operator
+                </button>
+                <span>PBKDF2 SHA-256</span>
+              </div>
+            )}
 
             <div
               style={{
@@ -168,31 +470,8 @@ export function LoginPage() {
           }}
         >
           <ShieldCheck size={14} style={{ color: "#a78bfa" }} />
-          <span>OAuth 2.0 Identity Protocol · Connected to LangGraph</span>
+          <span>PBKDF2 100k-iteration Hash · HMAC Session Token · LangGraph Protected</span>
         </div>
-
-        {!isGoogleConfigured && (
-          <div
-            style={{
-              padding: "10px 12px",
-              borderRadius: "8px",
-              background: "rgba(10, 11, 26, 0.6)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              fontSize: "11px",
-              color: "#9a99b2",
-              textAlign: "left",
-              lineHeight: 1.5,
-            }}
-          >
-            <strong style={{ color: "#d9d6e8", display: "block", marginBottom: "3px" }}>
-              Google Cloud Console Configuration:
-            </strong>
-            1. Create OAuth 2.0 Client ID in Google Cloud Console.<br />
-            2. Add Authorized JavaScript origin: <code>{window.location.origin}</code><br />
-            3. Add Authorized redirect URI: <code>{window.location.origin}/auth/callback</code><br />
-            4. Provide <code>VITE_GOOGLE_CLIENT_ID</code> in environment.
-          </div>
-        )}
       </div>
     </div>
   );

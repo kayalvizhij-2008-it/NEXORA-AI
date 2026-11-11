@@ -61,7 +61,7 @@ function Sidebar({ health, collapsed, onCollapse, open, onClose, user }: {
           <div className="runtime-mini"><span className={`runtime-dot runtime-${health}`} /><span>{health === "online" ? "Runtime connected" : health === "checking" ? "Connecting…" : "Runtime offline"}</span></div>
           <NavLink to="/app/exports" className={({ isActive }) => `nav-link ${isActive ? "nav-link-active" : ""}`}><ArrowDownToLine size={17} /><span>Export center</span></NavLink>
           <NavLink to="/app/settings" className={({ isActive }) => `nav-link ${isActive ? "nav-link-active" : ""}`}><Settings2 size={17} /><span>Settings</span></NavLink>
-          <NavLink to="/login" className={({ isActive }) => `nav-link ${isActive ? "nav-link-active" : ""}`}><User size={17} /><span>{user ? user.name.split(" ")[0] : "Google Account"}</span></NavLink>
+          <NavLink to="/login" className={({ isActive }) => `nav-link ${isActive ? "nav-link-active" : ""}`}><User size={17} /><span>{user ? user.name.split(" ")[0] : "Sign in / Account"}</span></NavLink>
           <div className="sidebar-tagline"><span className="brand-mark brand-mark-small">N</span><span>NEXORA AI<small>INTELLIGENCE IN MOTION</small></span></div>
         </div>
       </aside>
@@ -116,9 +116,7 @@ function TopNavigation({ pageName, health, refresh, threads, assistants, onOpenS
         <button className="icon-button refresh-button" title="Refresh runtime data" aria-label="Refresh runtime data" onClick={refresh}><Activity size={17} /></button>
         <NotificationPanel health={health} threads={threads} assistants={assistants} />
         <Link to="/login" className="avatar-link" title={user ? `Signed in as ${user.name}` : "Sign in / Account"} aria-label="Account profile">
-          {user?.picture ? (
-            <img src={user.picture} alt={user.name} style={{ width: "30px", height: "30px", borderRadius: "50%", objectFit: "cover", border: "1px solid #a78bfa" }} />
-          ) : user ? (
+          {user ? (
             <div className="avatar" style={{ background: "linear-gradient(135deg, #7955e9, #75dce8)", color: "#fff" }}>
               {user.name.charAt(0).toUpperCase()}
             </div>

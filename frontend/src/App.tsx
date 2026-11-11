@@ -16,7 +16,6 @@ import {
   MemoryPage, ResearchPage, SettingsPage, WorkflowsPage,
 } from "./pages/WorkspacePages";
 import { LoginPage } from "./pages/LoginPage";
-import { AuthCallbackPage } from "./pages/AuthCallbackPage";
 
 type AppContextValue = {
   assistants: Assistant[];
@@ -142,7 +141,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/auth/callback" element={<AuthCallbackPage />} />
+          <Route path="/auth/callback" element={<Navigate to="/login" replace />} />
           <Route path="/app" element={<WorkspaceLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<><RuntimeUnavailable /><DashboardPage /></>} />

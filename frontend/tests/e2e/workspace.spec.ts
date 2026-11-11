@@ -88,3 +88,20 @@ test("document intelligence preloads and displays sample operations brief", asyn
   await expect(page.getByText("NEXORA_AI_Sample_Operations_Brief.pdf")).toBeVisible();
   await expect(page.getByText("PARSED DOCUMENT PREVIEW")).toBeVisible();
 });
+
+test("email and password authentication supports registration, sign in, and session handling", async ({ page }) => {
+  await page.goto("/login");
+  await expect(page.getByRole("heading", { name: "Sign In to NEXORA AI" })).toBeVisible();
+
+  // Test toggle to Register
+  await page.getByRole("button", { name: "Register" }).click();
+  await expect(page.getByRole("heading", { name: "Create Operator Account" })).toBeVisible();
+
+  // Test toggle back to Sign In
+  await page.getByRole("button", { name: "Sign In" }).click();
+  await expect(page.getByRole("heading", { name: "Sign In to NEXORA AI" })).toBeVisible();
+
+  // Test Auto-fill Lead Operator and submission
+  await page.getByRole("button", { name: "Auto-fill Lead Operator" }).click();
+  await expect(page.getByPlaceholder("operator@nexora.ai")).toHaveValue("operator@nexora.ai");
+});

@@ -1,18 +1,54 @@
 import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import crypto from "crypto";
-import https from "https";
+import fs from "fs";
+import path from "path";
 
-function nexoraAuthPlugin(env: Record<string, string>) {
+function nexoraAuthPlugin() {
   const secretKey = process.env.AUTH_SECRET_KEY || "nexora-ai-secure-hmac-session-secret-2026";
+  const dataDir = path.resolve(process.cwd(), "..", "data");
+  const dataFile = path.join(dataDir, "users.json");
   const revokedSessions = new Set<string>();
+
+  function getUsers(): Record<string, any> {
+    try {
+      if (!fs.existsSync(dataFile)) return {};
+      return JSON.parse(fs.readFileSync(dataFile, "utf-8"));
+    } catch {
+      return {};
+    }
+  }
+
+  function saveUsers(users: Record<string, any>) {
+    try {
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
+      fs.writeFileSync(dataFile, JSON.stringify(users, null, 2), "utf-8");
+    } catch (e) {
+      console.warn("Could not write users.json in dev:", e);
+    }
+  }
+
+  function hashPassword(password: string, salt?: string): { hash: string; salt: string } {
+    const chosenSalt = salt || crypto.randomBytes(32).toString("hex");
+    const key = crypto.pbkdf2Sync(password, chosenSalt, 100000, 64, "sha256");
+    return { hash: key.toString("hex"), salt: chosenSalt };
+  }
+
+  function verifyPassword(password: string, storedHash: string, salt: string): boolean {
+    const key = crypto.pbkdf2Sync(password, salt, 100000, 64, "sha256");
+    const storedBuffer = Buffer.from(storedHash, "hex");
+    if (key.length !== storedBuffer.length) return false;
+    return crypto.timingSafeEqual(key, storedBuffer);
+  }
 
   function createSessionToken(user: any) {
     const payload = {
       sub: user.id,
       email: user.email,
       name: user.name,
-      picture: user.picture,
+      role: user.role || "operator",
       iat: Math.floor(Date.now() / 1000),
       exp: Math.floor(Date.now() / 1000) + 7 * 86400,
     };
@@ -48,106 +84,92 @@ function nexoraAuthPlugin(env: Record<string, string>) {
 
         res.setHeader("Content-Type", "application/json");
 
-        if (url === "/api/auth/config" && req.method === "GET") {
-          const clientId = env.VITE_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || "";
-          res.end(
-            JSON.stringify({
-              client_id: clientId,
-              is_configured: Boolean(clientId && !clientId.startsWith("<")),
-              callback_url: "/auth/callback",
-              mode: "development",
-            })
-          );
+        // Helper to read JSON request body
+        const readBody = () =>
+          new Promise<any>((resolve) => {
+            let body = "";
+            req.on("data", (chunk: any) => (body += chunk));
+            req.on("end", () => {
+              try {
+                resolve(JSON.parse(body || "{}"));
+              } catch {
+                resolve({});
+              }
+            });
+          });
+
+        if (url === "/api/auth/register" && req.method === "POST") {
+          const { email, password, name } = await readBody();
+          if (!email || !password) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ success: false, error: "Email and password are required." }));
+            return;
+          }
+          const cleanEmail = String(email).trim().toLowerCase();
+          const cleanName = String(name || cleanEmail.split("@")[0]).trim();
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ success: false, error: "Invalid email address format." }));
+            return;
+          }
+          if (String(password).length < 8) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ success: false, error: "Password must be at least 8 characters long." }));
+            return;
+          }
+          const users = getUsers();
+          if (users[cleanEmail]) {
+            res.statusCode = 409;
+            res.end(JSON.stringify({ success: false, error: "An account with this email already exists." }));
+            return;
+          }
+          const { hash, salt } = hashPassword(password);
+          const userId = "usr_" + crypto.randomBytes(12).toString("hex");
+          const newUser = {
+            id: userId,
+            email: cleanEmail,
+            name: cleanName,
+            password_hash: hash,
+            salt,
+            role: "operator",
+            created_at: Date.now(),
+          };
+          users[cleanEmail] = newUser;
+          saveUsers(users);
+
+          const safeUser = { id: newUser.id, email: newUser.email, name: newUser.name, role: newUser.role };
+          const sessionToken = createSessionToken(safeUser);
+          res.statusCode = 201;
+          res.end(JSON.stringify({ success: true, session_token: sessionToken, user: safeUser }));
           return;
         }
 
-        if (url === "/api/auth/verify" && req.method === "POST") {
-          let body = "";
-          req.on("data", (chunk: any) => {
-            body += chunk;
-          });
-          req.on("end", async () => {
-            try {
-              const { id_token } = JSON.parse(body || "{}");
-              if (!id_token) {
-                res.statusCode = 400;
-                res.end(JSON.stringify({ verified: false, error: "Missing id_token parameter" }));
-                return;
-              }
-
-              // Verify with Google tokeninfo
-              const googleRes = await new Promise<any>((resolve, reject) => {
-                https
-                  .get(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(id_token)}`, (gRes) => {
-                    let gData = "";
-                    gRes.on("data", (c) => (gData += c));
-                    gRes.on("end", () => {
-                      try {
-                        resolve({ status: gRes.statusCode, data: JSON.parse(gData) });
-                      } catch (e) {
-                        reject(e);
-                      }
-                    });
-                  })
-                  .on("error", reject);
-              });
-
-              if (googleRes.status !== 200 || !googleRes.data?.sub) {
-                res.statusCode = 401;
-                res.end(
-                  JSON.stringify({
-                    verified: false,
-                    error: googleRes.data?.error_description || "Google token verification failed",
-                  })
-                );
-                return;
-              }
-
-              const data = googleRes.data;
-              const expectedClientId = env.VITE_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
-
-              if (expectedClientId && !expectedClientId.startsWith("<") && data.aud !== expectedClientId) {
-                res.statusCode = 401;
-                res.end(JSON.stringify({ verified: false, error: "Token audience does not match configured Google Client ID" }));
-                return;
-              }
-
-              if (!["accounts.google.com", "https://accounts.google.com"].includes(data.iss)) {
-                res.statusCode = 401;
-                res.end(JSON.stringify({ verified: false, error: "Invalid token issuer" }));
-                return;
-              }
-
-              if (Number(data.exp) * 1000 < Date.now()) {
-                res.statusCode = 401;
-                res.end(JSON.stringify({ verified: false, error: "Google token has expired" }));
-                return;
-              }
-
-              const user = {
-                id: data.sub,
-                email: data.email,
-                name: data.name || data.given_name || data.email?.split("@")[0] || "User",
-                picture: data.picture,
-                provider: "google",
-                issuedAt: Date.now(),
-                expiresAt: Number(data.exp) * 1000,
-              };
-
-              const sessionToken = createSessionToken(user);
-              res.statusCode = 200;
-              res.end(
-                JSON.stringify({
-                  verified: true,
-                  session_token: sessionToken,
-                  user,
-                })
-              );
-            } catch (err: any) {
-              res.statusCode = 500;
-              res.end(JSON.stringify({ verified: false, error: err.message || "Server error verifying token" }));
-            }
-          });
+        if (url === "/api/auth/login" && req.method === "POST") {
+          const { email, password } = await readBody();
+          if (!email || !password) {
+            res.statusCode = 400;
+            res.end(JSON.stringify({ success: false, error: "Email and password are required." }));
+            return;
+          }
+          const cleanEmail = String(email).trim().toLowerCase();
+          const users = getUsers();
+          const user = users[cleanEmail];
+          if (!user) {
+            crypto.pbkdf2Sync(password, "00".repeat(32), 100000, 64, "sha256");
+            res.statusCode = 401;
+            res.end(JSON.stringify({ success: false, error: "Invalid email or password." }));
+            return;
+          }
+          const isValid = verifyPassword(password, user.password_hash, user.salt);
+          if (!isValid) {
+            res.statusCode = 401;
+            res.end(JSON.stringify({ success: false, error: "Invalid email or password." }));
+            return;
+          }
+          const safeUser = { id: user.id, email: user.email, name: user.name, role: user.role || "operator" };
+          const sessionToken = createSessionToken(safeUser);
+          res.statusCode = 200;
+          res.end(JSON.stringify({ success: true, session_token: sessionToken, user: safeUser }));
           return;
         }
 
@@ -183,7 +205,7 @@ function nexoraAuthPlugin(env: Record<string, string>) {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   return {
-    plugins: [react(), nexoraAuthPlugin(env)],
+    plugins: [react(), nexoraAuthPlugin()],
     server: {
       proxy: {
         "/langgraph-api": {

@@ -40,8 +40,7 @@ export default async function handler(req: any, res: any) {
         id: payload.sub,
         email: payload.email,
         name: payload.name,
-        picture: payload.picture,
-        provider: "google",
+        role: payload.role || "operator",
         expiresAt: payload.exp * 1000,
       },
     });
