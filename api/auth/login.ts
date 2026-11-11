@@ -4,20 +4,29 @@
 import crypto from "crypto";
 import fs from "fs";
 import path from "path";
+import os from "os";
 
 const AUTH_SECRET_KEY =
   process.env.AUTH_SECRET_KEY || "nexora-ai-secure-hmac-session-secret-2026";
-const DATA_FILE = path.join(process.cwd(), "data", "users.json");
+const REPO_DATA_FILE = path.join(process.cwd(), "data", "users.json");
+const TMP_DATA_FILE = path.join(os.tmpdir(), "nexora_users.json");
 
 function getUsers(): Record<string, any> {
+  const users: Record<string, any> = {};
+
   try {
-    if (!fs.existsSync(DATA_FILE)) {
-      return {};
+    if (fs.existsSync(REPO_DATA_FILE)) {
+      Object.assign(users, JSON.parse(fs.readFileSync(REPO_DATA_FILE, "utf-8")));
     }
-    return JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"));
-  } catch {
-    return {};
-  }
+  } catch {}
+
+  try {
+    if (fs.existsSync(TMP_DATA_FILE)) {
+      Object.assign(users, JSON.parse(fs.readFileSync(TMP_DATA_FILE, "utf-8")));
+    }
+  } catch {}
+
+  return users;
 }
 
 function verifyPassword(password: string, storedHash: string, salt: string): boolean {

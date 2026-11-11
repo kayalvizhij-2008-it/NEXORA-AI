@@ -1,0 +1,29 @@
+{
+  "lead.operator@nexora.ai": {
+    "id": "usr_d9179c8213b16402bfa84b22",
+    "email": "lead.operator@nexora.ai",
+    "name": "Lead Operator",
+    "password_hash": "d91f63b0e530137b722b63359ab36433155cd95afbb7d34e527105b46bd36ae53d3bdcaf1346c45416c339c687777c35219f340e64c5edbc4a18a2af51a4f78b",
+    "salt": "427ba47a392e76af19428d9532ff1af4d761e0596d2f95244eb0363fef5fed33",
+    "role": "operator",
+    "created_at": 1762855000000
+  },
+  "operator@nexora.ai": {
+    "id": "usr_e21f27c3eade80d76758487b",
+    "email": "operator@nexora.ai",
+    "name": "Lead Operator",
+    "password_hash": "2e54cce5f19f08f4485aebaa196f13b95c99fbb63c68f9b6e155af8536f7a35cde02730efb60368d0e5f2238d7074880b23ed40518b13d35206e676183bc3029",
+    "salt": "58f55e80fba5b589cec2f1ecf34ebb751b788c50bb45d27519520aa8e2ae6b85",
+    "role": "operator",
+    "created_at": 1762855000000
+  },
+  "admin@nexora.ai": {
+    "id": "usr_bdd5b16832de1f4742d0f0a2",
+    "email": "admin@nexora.ai",
+    "name": "Admin",
+    "password_hash": "5397c92bad5d0abf987d2c8988a6f30f1fe616d96ed9a67baea209b45cf13b2c851ba9fcef7483d517396c8cb666c4b27424dfb603681646ef09d5e3ea141b93",
+    "salt": "8e54d9979e8d824dd7342d11c31dcc63826c3b7843e2188967d801c1858b1554",
+    "role": "operator",
+    "created_at": 1762855000000
+  }
+}

@@ -68,7 +68,8 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 *.db
-data/
+data/*
+!data/users.json
 
 # Flask stuff:
 instance/
@@ -186,3 +187,4 @@ playwright-report/
 .env.local
 frontend/.env.local
 .vercel
+.env*
